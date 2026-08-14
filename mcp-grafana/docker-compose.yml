@@ -1,0 +1,19 @@
+services:
+  mcp-grafana:
+    image: grafana/mcp-grafana:latest
+    restart: unless-stopped
+    command:
+      - --transport
+      - streamable-http
+      - --address
+      - 0.0.0.0:8000
+      - --enabled-tools
+      - datasource,loki
+      - --disable-write
+      - --max-loki-log-limit
+      - "200"
+    environment:
+      GRAFANA_URL: ${GRAFANA_URL}
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
+    ports:
+      - "127.0.0.1:8000:8000"
