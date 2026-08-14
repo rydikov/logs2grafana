@@ -1,0 +1,19 @@
+services:
+  grafana-agent:
+    hostname: example-host-7f3c9a
+    image: grafana/agent:v0.44.2
+    restart: unless-stopped
+    cap_add:
+      - SYS_TIME
+    volumes:
+      # journal
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /run/systemd/journal/socket:/run/systemd/journal/socket:ro
+      # other
+      - ./tmp:/tmp
+      - ./data:/etc/agent/data
+      - ./agent.yaml:/etc/agent/agent.yaml
+      - /:/rootfs:ro,rslave
+      - /sys:/sys:ro,rslave
+      - /etc/localtime:/etc/localtime:ro
