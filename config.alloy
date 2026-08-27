@@ -1,0 +1,90 @@
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+// Collect host metrics with the node_exporter embedded in Alloy.
+prometheus.exporter.unix "node" {
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/rootfs"
+
+	disable_collectors = [
+		"netclass",
+		"infiniband",
+		"wifi",
+		"arp",
+		"timex",
+		"nfs",
+		"mdadm",
+		"btrfs",
+		"xfs",
+	]
+}
+
+prometheus.scrape "node" {
+	targets         = prometheus.exporter.unix.node.targets
+	scrape_interval = "15s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		url = "https://prometheus-blocks-prod-us-central1.grafana.net/api/prom/push"
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_API_KEY")
+		}
+	}
+}
+
+// Preserve the labels produced by the previous Grafana Agent journal scrape.
+loki.relabel "journal" {
+	forward_to = []
+
+	rule {
+		source_labels = ["__journal__systemd_unit"]
+		target_label  = "unit"
+	}
+
+	rule {
+		source_labels = ["__journal__hostname"]
+		target_label  = "host"
+	}
+
+	rule {
+		source_labels = ["__journal_syslog_identifier"]
+		target_label  = "syslog_identifier"
+	}
+
+	rule {
+		source_labels = ["__journal_priority"]
+		target_label  = "priority"
+	}
+}
+
+loki.source.journal "systemd_journal" {
+	path          = "/var/log/journal"
+	max_age       = "12h"
+	labels        = {job = "systemd-journal"}
+	relabel_rules = loki.relabel.journal.rules
+	forward_to    = [loki.write.grafana_cloud.receiver]
+
+	// Reuse the Grafana Agent position on the first Alloy start.
+	legacy_position {
+		file = "/tmp/positions.yaml"
+		name = "systemd_journal"
+	}
+}
+
+loki.write "grafana_cloud" {
+	endpoint {
+		url = "https://logs-prod-us-central1.grafana.net/loki/api/v1/push"
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_LOKI_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_API_KEY")
+		}
+	}
+}

@@ -1,19 +1,32 @@
 services:
-  grafana-agent:
-    hostname: example-host-7f3c9a
-    image: grafana/agent:v0.44.2
+  alloy:
+    hostname: ${ALLOY_HOSTNAME:?Set ALLOY_HOSTNAME in .env}
+    image: grafana/alloy:v1.18.0
     restart: unless-stopped
-    cap_add:
-      - SYS_TIME
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    environment:
+      GRAFANA_CLOUD_PROMETHEUS_USERNAME: ${GRAFANA_CLOUD_PROMETHEUS_USERNAME:?Set GRAFANA_CLOUD_PROMETHEUS_USERNAME in .env}
+      GRAFANA_CLOUD_LOKI_USERNAME: ${GRAFANA_CLOUD_LOKI_USERNAME:?Set GRAFANA_CLOUD_LOKI_USERNAME in .env}
+      GRAFANA_CLOUD_API_KEY: ${GRAFANA_CLOUD_API_KEY:?Set GRAFANA_CLOUD_API_KEY in .env}
+    ports:
+      - 127.0.0.1:12345:12345
     volumes:
-      # journal
+      # systemd journal and the legacy Grafana Agent position
       - /var/log/journal:/var/log/journal:ro
       - /run/log/journal:/run/log/journal:ro
       - /run/systemd/journal/socket:/run/systemd/journal/socket:ro
-      # other
       - ./tmp:/tmp
-      - ./data:/etc/agent/data
-      - ./agent.yaml:/etc/agent/agent.yaml
+
+      # Alloy configuration and persistent component state
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - ./data:/var/lib/alloy/data
+
+      # Host filesystems used by prometheus.exporter.unix
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
       - /:/rootfs:ro,rslave
-      - /sys:/sys:ro,rslave
       - /etc/localtime:/etc/localtime:ro
