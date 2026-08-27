@@ -11,6 +11,9 @@ Create the local environment file and fill in the Grafana Cloud credentials:
 cp .env.example .env
 ```
 
+Set `ALLOY_HOSTNAME` to the host name that should appear as the Prometheus
+`instance` label. The default value in the example is `example-host-7f3c9a`.
+
 Use the Prometheus and Loki usernames shown in the Grafana Cloud connection
 details. `GRAFANA_CLOUD_API_KEY` must be an access policy token with permission
 to write metrics and logs.

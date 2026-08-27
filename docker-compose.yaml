@@ -3,6 +3,10 @@ services:
     hostname: ${ALLOY_HOSTNAME:?Set ALLOY_HOSTNAME in .env}
     image: grafana/alloy:v1.18.0
     restart: unless-stopped
+    pid: host
+    privileged: true
+    security_opt:
+      - apparmor:unconfined
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
@@ -17,8 +21,6 @@ services:
     volumes:
       # systemd journal and the legacy Grafana Agent position
       - /var/log/journal:/var/log/journal:ro
-      - /run/log/journal:/run/log/journal:ro
-      - /run/systemd/journal/socket:/run/systemd/journal/socket:ro
       - ./tmp:/tmp
 
       # Alloy configuration and persistent component state
